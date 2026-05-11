@@ -7,14 +7,12 @@ import (
 	"strconv"
 )
 
-// msg is sent by a player to the judge: their chosen number and a reply channel.
 type msg struct {
 	number int
-	reply  chan bool // true → winner (advance), false → eliminated
+	reply  chan bool 
 	id     int
 }
 
-// player participates in one round on ch, returning whether it won.
 func player(id int, ch chan msg) bool {
 	number := rand.IntN(10)
 	reply := make(chan bool)
@@ -28,8 +26,6 @@ func player(id int, ch chan msg) bool {
 	return won
 }
 
-// tournament runs one player through all rounds in sequence.
-// The player walks the channel slice, stopping as soon as it loses.
 func tournament(id int, channels []chan msg, done chan struct{}) {
 	defer close(done)
 	for _, ch := range channels {
@@ -40,7 +36,6 @@ func tournament(id int, channels []chan msg, done chan struct{}) {
 	fmt.Printf("\n Player %d wins the tournament!\n", id)
 }
 
-// judge manages one round: reads `games` pairs and sends verdicts.
 func judge(round, games int, ch chan msg) {
 	fmt.Printf("\n--- Round %d: %d concurrent game(s) ---\n", round, games)
 	for i := 0; i < games; i++ {
@@ -71,26 +66,21 @@ func main() {
 	N := 1 << m
 	fmt.Printf("Odds-and-Evens Tournament: %d players, %d rounds\n\n", N, m)
 
-	// One unbuffered channel per round.
 	channels := make([]chan msg, m)
 	for i := range channels {
 		channels[i] = make(chan msg)
 	}
 
-	// Launch N player goroutines. Each walks all channels, stopping on a loss.
 	dones := make([]chan struct{}, N)
 	for i := range N {
 		dones[i] = make(chan struct{})
 		go tournament(i+1, channels, dones[i])
 	}
 
-	// Run m rounds sequentially on the main goroutine.
-	// Round r has N / 2^(r+1) games.
 	for r := range m {
 		judge(r+1, N>>(r+1), channels[r])
 	}
 
-	// Wait for every player goroutine to exit.
 	for _, d := range dones {
 		<-d
 	}
