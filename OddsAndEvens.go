@@ -5,7 +5,6 @@ import (
 	"math/rand/v2"
 	"os"
 	"strconv"
-	// "time"
 )
 
 type msg struct {
@@ -27,7 +26,7 @@ func player(id int, ch chan msg) result {
 	return result
 }
 
-func tournament(id int, channels []chan msg, barriers []chan struct{}) {
+func tournament(id int, channels []chan msg, barriers []chan struct{}, done chan struct{}) {
 	for i, ch := range channels {
 		result := player(id, ch)
 		if !result.won {
@@ -37,10 +36,11 @@ func tournament(id int, channels []chan msg, barriers []chan struct{}) {
 		fmt.Printf("Player %d wins against player %d in round %d\n", id, result.opponent, i)
 	}
 	fmt.Printf("\n Player %d wins the tournament!\n", id)
+
+	done <- struct{}{}
 }
 
-func judge(round, games int, ch chan msg, barrier chan struct{}) {
-	// fmt.Printf("\n--- Round %d: %d concurrent game(s) ---\n", round, games)
+func judge(games int, ch chan msg, barrier chan struct{}) {
 	for i := 0; i < games; i++ {
 		m1 := <-ch
 		m2 := <-ch
@@ -79,14 +79,15 @@ func main() {
 		barriers[i] = make(chan struct{})
 	}
 
+	done := make(chan struct{})
+
 	for i := range N {
-		go tournament(i+1, channels, barriers)
+		go tournament(i+1, channels, barriers, done)
 	}
 
 	for r := range m {
-		judge(r+1, N>>(r+1), channels[r], barriers[r])
+		judge(N>>(r+1), channels[r], barriers[r])
 	}
 
-	// todo: trovare un modo per non terminare prima di stampare il vincitore del torneo
-	for{}
+	<-done
 }
