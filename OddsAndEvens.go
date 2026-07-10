@@ -41,7 +41,7 @@ func tournament(id int, channels []chan msg, barriers []chan struct{}, done chan
 }
 
 func judge(games int, ch chan msg, barrier chan struct{}) {
-	for i := 0; i < games; i++ {
+	for range games {
 		m1 := <-ch
 		m2 := <-ch
 		sum := m1.number + m2.number
@@ -79,7 +79,7 @@ func main() {
 		barriers[i] = make(chan struct{})
 	}
 
-	done := make(chan struct{})
+	done := make(chan struct{}, 1)
 
 	for i := range N {
 		go tournament(i+1, channels, barriers, done)

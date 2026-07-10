@@ -1,7 +1,9 @@
 #import "@preview/lilaq:0.4.0" as lq
 
 #align(center, text(18pt)[*Assignment 3 di Programmazione Concorrente e Distribuita 2025/2026*])
-#align(center, text(12pt)[Mattia Ronchi, matr. 0001236997 \ Samorì Andrea matr. 0001235969 \ Andrea Monaco matr. 000])
+#align(center, text(
+  12pt,
+)[Mattia Ronchi, matr. 0001236997 \ Samorì Andrea matr. 0001235969 \ Andrea Monaco matr. 0001225150])
 
 = Analisi del problema
 
