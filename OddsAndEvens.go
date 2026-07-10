@@ -7,53 +7,37 @@ import (
 	"strconv"
 )
 
-type msg struct {
-	number int
-	reply  chan result
-	id     int
+type played struct {
+	id    int
+	send  chan int
+	reply chan bool
 }
 
-type result struct {
-	won      bool
-	opponent int // player id
-}
-
-func player(id int, ch chan msg) result {
-	number := rand.IntN(10)
-	reply := make(chan result)
-	ch <- msg{number, reply, id}
-	result := <-reply
-	return result
-}
-
-func tournament(id int, channels []chan msg, barriers []chan struct{}, done chan struct{}) {
-	for i, ch := range channels {
-		result := player(id, ch)
-		if !result.won {
+func play(player played, rounds int) {
+	for range rounds {
+		player.send <- rand.IntN(10)
+		victory := <-player.reply
+		if !victory {
 			return
 		}
-		<-barriers[i]
-		fmt.Printf("Player %d wins against player %d in round %d\n", id, result.opponent, i)
 	}
-	fmt.Printf("\n Player %d wins the tournament!\n", id)
-
-	done <- struct{}{}
 }
 
-func judge(games int, ch chan msg, barrier chan struct{}) {
-	for range games {
-		m1 := <-ch
-		m2 := <-ch
-		sum := m1.number + m2.number
-		if sum%2 == 0 {
-			m1.reply <- result{true, m2.id}
-			m2.reply <- result{false, m1.id}
-		} else {
-			m1.reply <- result{false, m2.id}
-			m2.reply <- result{true, m1.id}
-		}
+func match(round int, left <-chan played, right <-chan played, out chan<- played) {
+	a := <-left
+	b := <-right
+
+	n1 := <-a.send
+	n2 := <-b.send
+	winner, loser, parity := a, b, "even"
+	if (n1+n2)%2 != 0 {
+		winner, loser, parity = b, a, "odd"
 	}
-	close(barrier)
+	winner.reply <- true
+	loser.reply <- false
+	fmt.Printf("round %d: player %d beats player %d  (%d+%d=%d, %s)\n",
+		round, winner.id, loser.id, n1, n2, n1+n2, parity)
+	out <- winner
 }
 
 func main() {
@@ -66,28 +50,32 @@ func main() {
 		fmt.Fprintln(os.Stderr, "m must be a positive integer")
 		os.Exit(1)
 	}
-
 	N := 1 << m
 	fmt.Printf("Odds-and-Evens Tournament: %d players, %d rounds\n\n", N, m)
 
-	channels := make([]chan msg, m)
-	for i := range channels {
-		channels[i] = make(chan msg)
-	}
-	barriers := make([]chan struct{}, m)
-	for i := range barriers {
-		barriers[i] = make(chan struct{})
+	leaves := make([]chan played, N)
+
+
+	for i := range leaves {
+		leaves[i] = make(chan played, 1)
 	}
 
-	done := make(chan struct{}, 1)
-
-	for i := range N {
-		go tournament(i+1, channels, barriers, done)
+	layer := leaves
+	for round := 1; len(layer) > 1; round++ {
+		next := make([]chan played, len(layer)/2)
+		for i := range next {
+			next[i] = make(chan played, 1)
+			go match(round, layer[2*i], layer[2*i+1], next[i])
+			
+		}
+		layer = next
 	}
 
-	for r := range m {
-		judge(N>>(r+1), channels[r], barriers[r])
+	for i := range leaves {
+		player := played{i, make(chan int), make(chan bool)}
+		leaves[i] <- player
+		go play(player, m)
 	}
 
-	<-done
+	fmt.Printf("\nPlayer %d wins the tournament!\n", <-layer[0])
 }
