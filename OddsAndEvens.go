@@ -49,10 +49,10 @@ func match(round int, left <-chan played, right <-chan played, out chan<- played
 	if (n1+n2)%2 != 0 {
 		winner, loser, parity = b, a, "odd"
 	}
-	winner.reply <- true
-	loser.reply <- false
 	fmt.Printf("round %d: player %d beats player %d  (%d+%d=%d, %s)\n",
 		round, winner.id, loser.id, n1, n2, n1+n2, parity)
+	winner.reply <- true
+	loser.reply <- false
 	out <- winner
 }
 
