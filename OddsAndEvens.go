@@ -11,8 +11,8 @@ type played struct {
 	id      int
 	send    chan int
 	reply   chan bool
-	notify  chan struct{}
-	barrier chan struct{}
+	notify  chan<- struct{}
+	barrier <-chan struct{}
 }
 
 func play(player played, rounds int) {
@@ -27,13 +27,13 @@ func play(player played, rounds int) {
 	}
 }
 
-func roundManager(round int, recv chan struct{}, send chan struct{}) {
+func roundManager(round int, recv <-chan struct{}, send chan<- struct{}) {
 	for i := range round {
-		fmt.Printf("Round Actor says NEW ROUND %d", i+1)
+		fmt.Printf("Round Actor says NEW ROUND %d\n", i+1)
 		for range 1 << (round - i) {
 			<-recv
 		}
-		for range 1 << (round - i-1) {
+		for range 1 << (round - i - 1) {
 			send <- struct{}{}
 		}
 	}
@@ -95,5 +95,6 @@ func main() {
 		go play(player, m)
 	}
 
-	fmt.Printf("\nPlayer %d wins the tournament!\n", <-layer[0])
+	player := <-layer[0]
+	fmt.Printf("\nPlayer %d wins the tournament!\n", player.id)
 }
