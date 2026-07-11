@@ -7,16 +7,30 @@
 
 = Analisi del problema
 
-L'assignment ha l'obiettivo di realizzare il gioco `Odds-and-Evens`, un torneo concorrente di pari o dispari tra più giocatori. Nella nostra implementazione, ogni round del torneo consiste in più partite concorrenti. In ogni partita, 2 giocatori scelgono un numero casuale tra 0 e 9 e il giudice decreterà il vincitore della partita. Questo proseguirà nel round successivo, il perdente viene eliminato.
+L'assignment ha l'obiettivo di realizzare il gioco `Odds-and-Evens`, un torneo concorrente di pari o dispari tra più giocatori. Nella nostra implementazione, ogni round del torneo consiste in più partite concorrenti. In ogni partita, 2 giocatori scelgono un numero casuale tra 0 e 9 e il giudice (`match`) decreterà il vincitore della partita. Questo proseguirà nel round successivo, il perdente viene eliminato.
 
 = Aspetti rilevanti per la concorrenza
 
 Dal punto di vista della concorrenza, abbiamo individuato alcuni aspetti rilevanti:
 - la sincronizzazione dei round: i giocatori non possono avanzare al round successivo finchè tutti le partite del round non sono finite, decretando i vincitori che procederanno
+- le partite di uno stesso round sono giocate (e valutate) in parallelo
 
 = Design della soluzione
 
-La soluzione da noi implementata crea una `goroutine` per ogni giocatore e una funzione di giudizio per ciascun round.
+La soluzione da noi implementata crea diverse `goroutine`:
+- una per il `roundManager`, che si occupa di gestire l'avanzamento dei round
+- una per ogni partita (`match`)
+- una per ogni giocatore (`play`)
+
+Per prima cosa, viene configurato il `roundManager`. Dopo, viene creato l'albero del torneo. Nelle foglie, sono presenti tutti i giocatori, e nella radice il vincitore. Tramite questo albero, vengono creati i vari `match`. Infine, vengono istanziati tutti i giocatori che, tramite `play`, iniziano a giocare al torneo.
+
+== RoundManager
+
+Il `roundManager` è adibito all'avanzamento dei round. Per farlo, aspetta che tutti i giocatori partecipanti al round corrente abbiano completato la partita. Poi, invia ai vincitori in
+
+== Match
+
+Il match rappresenta una singola partita, svolta da due giocatori.
 
 == Giocatori
 

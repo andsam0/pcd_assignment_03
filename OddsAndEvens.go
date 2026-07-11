@@ -11,30 +11,30 @@ type played struct {
 	id      int
 	send    chan int
 	reply   chan bool
-	notify  chan<- struct{}
-	barrier <-chan struct{}
+	notify  []chan struct{}
+	barrier []chan struct{}
 }
 
 func play(player played, rounds int) {
-	for range rounds {
+	for i := range rounds {
 		player.send <- rand.IntN(10)
 		victory := <-player.reply
-		player.notify <- struct{}{}
+		player.notify[i] <- struct{}{}
 		if !victory {
 			return
 		}
-		<-player.barrier
+		<-player.barrier[i]
 	}
 }
 
-func roundManager(round int, recv <-chan struct{}, send chan<- struct{}) {
+func roundManager(round int, recv []chan struct{}, send []chan struct{}) {
 	for i := range round {
 		fmt.Printf("Round Actor says NEW ROUND %d\n", i+1)
 		for range 1 << (round - i) {
-			<-recv
+			<-recv[i]
 		}
 		for range 1 << (round - i - 1) {
-			send <- struct{}{}
+			send[i] <- struct{}{}
 		}
 	}
 }
@@ -70,8 +70,13 @@ func main() {
 	fmt.Printf("Odds-and-Evens Tournament: %d players, %d rounds\n\n", N, m)
 
 	leaves := make([]chan played, N)
-	notify := make(chan struct{})
-	barrier := make(chan struct{})
+	notify := make([]chan struct{}, m)
+	barrier := make([]chan struct{}, m)
+
+	for i := range m {
+		notify[i] = make(chan struct{})
+		barrier[i] = make(chan struct{}, 1)
+	}
 
 	go roundManager(m, notify, barrier)
 
