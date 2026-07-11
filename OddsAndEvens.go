@@ -29,7 +29,7 @@ func play(player played, rounds int) {
 
 func roundManager(rounds int, notify []chan struct{}, barrier []chan struct{}) {
 	fmt.Println("=== ROUND 1 ===")
-	for i := 0; i < rounds; i++ {
+	for i := range rounds {
 		for range 1 << (rounds - i) {
 			<-notify[i]
 		}
