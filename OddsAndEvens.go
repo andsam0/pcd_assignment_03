@@ -27,14 +27,17 @@ func play(player played, rounds int) {
 	}
 }
 
-func roundManager(round int, recv []chan struct{}, send []chan struct{}) {
-	for i := range round {
-		fmt.Printf("Round Actor says NEW ROUND %d\n", i+1)
-		for range 1 << (round - i) {
-			<-recv[i]
+func roundManager(rounds int, notify []chan struct{}, barrier []chan struct{}) {
+	fmt.Println("=== ROUND 1 ===")
+	for i := 0; i < rounds; i++ {
+		for range 1 << (rounds - i) {
+			<-notify[i]
 		}
-		for range 1 << (round - i - 1) {
-			send[i] <- struct{}{}
+		if i < rounds-1 {
+			fmt.Printf("=== ROUND %d ===\n", i+2)
+		}
+		for range 1 << (rounds - i - 1) {
+			barrier[i] <- struct{}{}
 		}
 	}
 }
